@@ -174,8 +174,8 @@ end
 
 @testset "TargetSizeKeepFree" begin
     mktempdir() do scfc_root
-        # Keep (current_freespace - 10MB) free, essentiall allowing this scfc to grow up to 10MB
-        keep_free = get_disk_freespace(scfc_root) - 10*1024*1024
+        # Keep (current_freespace - 100MB) free, essentiall allowing this scfc to grow up to 100MB
+        keep_free = get_disk_freespace(scfc_root) - 100*1024*1024
         scfc = SizeConstrainedFileCache(scfc_root, TargetSizeKeepFree(keep_free), DiscardLRU())
 
         # Add five entries, checking each time that the disk space is going down roughly as we expect.
@@ -184,15 +184,15 @@ end
         filepaths = String[]
         starting_freespace = get_disk_freespace(scfc_root)
         for idx in 1:5
-            filepath = add_junk_file(scfc, 1024*1024)
+            filepath = add_junk_file(scfc, 10*1024*1024)
             push!(filepaths, filepath)
             @test isfile(filepaths[end])
-            @test scfc.total_size == 1024*1024*idx
-            @test abs(Int64(starting_freespace - (get_disk_freespace(scfc_root) + idx*1024*1024))) < 512*1024
+            @test scfc.total_size == 10*1024*1024*idx
+            @test abs(Int64(starting_freespace - (get_disk_freespace(scfc_root) + idx*10*1024*1024))) < 5*1024*1024
         end
 
-        # If we now try to add an 8MB file, test that at least the first two chunks we added get removed:
-        add_junk_file(scfc, 8*1024*1024)
+        # If we now try to add an 80MB file, test that at least the first two chunks we added get removed:
+        add_junk_file(scfc, 80*1024*1024)
         @test !isfile(filepaths[1])
         @test !isfile(filepaths[2])
     end

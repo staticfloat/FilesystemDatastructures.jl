@@ -19,7 +19,7 @@ struct darwin_statfs64
     f_mntfromname::NTuple{1024,Cchar}   # mounted filesystem
     f_reserved::NTuple{8,UInt32}        # For future use
 
-    darwin_statfs64() = new(0,0,0,0,0,0,0,ntuple(x->0,2),0,0,0,0,ntuple(x->0,16),ntuple(x->0,1024), ntuple(x->0,1024), ntuple(x->0,8))
+    darwin_statfs64() = new()
 end
 
 # Linux 64-bit (large file support enabled) statvfs struct
@@ -36,7 +36,7 @@ struct linux_statvfs64
     f_flag::Culong                      # Mount flags
     f_namemax::Culong                   # Maximum filename length
 
-    linux_statvfs64() = new(0,0,0,0,0,0,0,0,0,0,0)
+    linux_statvfs64() = new()
 end
 
 
