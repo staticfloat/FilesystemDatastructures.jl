@@ -86,10 +86,11 @@ end
         @test count([!startswith(k, "subdir/") for (k, v) in scfc.entries]) == 62
 
         # This time with a smaller target size, to ensure it runs a shrink immediately.
-        # Note that we are relying here on the ordering of `mtime` to decide which files are
-        # getting removed; that's not perfect, but it's better than completely randomly.
+        # We can't tell exactly what would be deleted here, if the platform we're running on
+        # doesn't track `mtime`'s properly; so we'll just assert that the total size satisfies
+        # the constraint and call it good:
         scfc = SizeConstrainedFileCache(scfc_root, TargetSizeConstant(2*1024), DiscardLRU())
-        @test scfc.total_size == 2*1024
+        @test scfc.total_size <= 2*1024
 
         # Also ensure that trying to cache something too big fails:
         @test_throws ArgumentError add_junk_file(scfc, 100*1024)
