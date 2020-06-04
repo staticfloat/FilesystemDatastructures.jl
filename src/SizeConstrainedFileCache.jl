@@ -101,12 +101,13 @@ bounds.  If the new object cannot fit wihtin the cache at all, throws an `Argume
 all access counters, treating it as a semantically different object than the object that
 was replaced.
 """
-function add!(scfc::SizeConstrainedFileCache, key::AbstractString, new_size::UInt64)
+function add!(scfc::SizeConstrainedFileCache, key::AbstractString, new_size)
     # Remove this key from the cache if it already exists.
     delete!(scfc, key)
 
-    target_size = scfc.target_size(scfc)
-    if scfc.total_size + new_size > target_size
+    target_size = UInt64(scfc.target_size(scfc))
+    new_total_size = UInt64(scfc.total_size + new_size)
+    if new_total_size > target_size
         # If the new value is just preposterously large, complain
         if new_size > target_size
             throw(ArgumentError(
@@ -116,7 +117,7 @@ function add!(scfc::SizeConstrainedFileCache, key::AbstractString, new_size::UIn
 
         # Call `shrink!()``.  We have no behavior for `shrink!()` failing; we assume it
         # can always hit the shrinking target we give it.
-        shrink!(scfc, scfc.total_size + new_size - target_size)
+        shrink!(scfc, UInt64(new_total_size - target_size))
     end
 
     scfc.entries[key] = CacheEntry(new_size, time(), 1)
@@ -130,17 +131,19 @@ end
     delete!(scfc, key)
 
 Removes a key from the file cache, clearing all metadata about that key within the cache.
-Also removes the backing file on disk if it still exists.
+Also removes the backing file on disk if it still exists.  Returns `true` if the key was
+actually deleted.
 """
 function delete!(scfc::SizeConstrainedFileCache, key::AbstractString)
     if !haskey(scfc.entries, key)
-        return
+        return false
     end
 
     entry = scfc.entries[key]
     rm(filepath(scfc, key); force=true)
     delete!(scfc.entries, key)
     scfc.total_size -= entry.size
+    return true
 end
 
 """
@@ -218,6 +221,7 @@ end
 
 Shrinks a file cache by the amount given by discarding files within the file cache,
 stopping only when the target has been met or the list of keys to discard is exhausted.
+Returns the new total size of the file cache.
 """
 function shrink!(scfc::SizeConstrainedFileCache, size_to_shrink::UInt64)
     # Sort the keys by the user criterion
@@ -228,6 +232,7 @@ function shrink!(scfc::SizeConstrainedFileCache, size_to_shrink::UInt64)
     while scfc.total_size > target_size && !isempty(keys_to_discard)
         delete!(scfc, popfirst!(keys_to_discard))
     end
+    return scfc.total_size
 end
 
 

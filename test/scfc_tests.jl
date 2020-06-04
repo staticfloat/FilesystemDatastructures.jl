@@ -27,9 +27,13 @@ end
         @test scfc.total_size == 1024 + 512
 
         # Delete that new one and see if it goes down:
-        delete!(scfc, basename(filepath))
+        @test delete!(scfc, basename(filepath))
         @test !isfile(filepath)
         @test !hit!(scfc, basename(filepath))
+        @test scfc.total_size == 1024
+
+        # Test that deleting somethign twice doesn't do anything:
+        @test !delete!(scfc, basename(filepath))
         @test scfc.total_size == 1024
 
         # Create a bunch more to fill up the cache:
