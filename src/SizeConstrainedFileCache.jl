@@ -1,5 +1,5 @@
 import Base: size, delete!
-export SizeConstrainedFileCache, add!, delete!, hit!, rebuild!,
+export SizeConstrainedFileCache, add!, delete!, hit!, rebuild!, filepath,
        TargetSizeConstant, TargetSizeKeepFree, DiscardLRU, DiscardLFU
 
 struct CacheEntry
@@ -124,7 +124,9 @@ function add!(scfc::SizeConstrainedFileCache, key::AbstractString, new_size)
     scfc.total_size += new_size
 
     # Return the filepath so that users can use this in `open()` or whatever
-    return filepath(scfc, key)
+    path = filepath(scfc, key)
+    mkpath(dirname(path))
+    return path
 end
 
 """
