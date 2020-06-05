@@ -96,6 +96,8 @@ end
         @test_throws ArgumentError add_junk_file(scfc, 100*1024)
 
         # Test that add!()'ing something that already exists replaces it:
+        add_junk_file(scfc, 1*1024)
+        add_junk_file(scfc, 1*1024)
         k, e = first(scfc.entries)
         add!(scfc, k, UInt64(100))
         @test scfc.total_size == 1024 + 100
