@@ -243,7 +243,13 @@ end
 TargetSizeConstant(bytes) = (scfc) -> UInt64(bytes)
 # Ensure that `bytes` are always free on the disk the scfc is stored on
 TargetSizeKeepFree(bytes) = (scfc) -> begin
-    UInt64(get_disk_freespace(scfc.root) + scfc.total_size - bytes)
+    # Be careful of unsigned wraparound
+    curr = get_disk_freespace(scfc.root) + scfc.total_size
+    if bytes > curr
+        return UInt64(0)
+    else
+        return UInt64(curr - bytes)
+    end
 end
 
 
