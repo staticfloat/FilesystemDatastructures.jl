@@ -1,4 +1,3 @@
-import Base: size, delete!
 export SizeConstrainedFileCache, add!, delete!, hit!, rebuild!, filepath,
        TargetSizeConstant, TargetSizeKeepFree, DiscardLRU, DiscardLFU
 
@@ -8,8 +7,10 @@ struct CacheEntry
     num_accessed::UInt64
 end
 
+abstract type FileCache end
+
 """
-    SizeConstrainedFileCache
+    SizeConstrainedFileCache <: FileCache
 
 Represents a size-constrained file cache.  Configurable with different policies for when
 to discard elements from the cache and how to choose which elements to discard.
@@ -31,7 +32,7 @@ Example usage:
     # Delete that file
     delete!(scfc, key)
 """
-mutable struct SizeConstrainedFileCache
+mutable struct SizeConstrainedFileCache <: FileCache
     # storage root
     root::String
 
@@ -80,16 +81,16 @@ mutable struct SizeConstrainedFileCache
 end
 
 """
-    filepath(scfc, key)
+    filepath(fc::FileCache, key::AbstractString)
 
 Given a `key`, returns the path on disk for that key.
 """
-function filepath(scfc::SizeConstrainedFileCache, key::AbstractString)
+function filepath(scfc::FileCache, key::AbstractString)
     return joinpath(scfc.root, key)
 end
 
 """
-    add!(scfc, key, new_size)
+    add!(scfc::SizeConstrainedFileCache, key::AbstractString, new_size)
 
 Reserves space for a new file within the file cache of the specified size.  If the
 addition would result in a new total size that is greater than the target specified by
@@ -130,13 +131,13 @@ function add!(scfc::SizeConstrainedFileCache, key::AbstractString, new_size)
 end
 
 """
-    delete!(scfc, key)
+    delete!(fc::FileCache, key)
 
 Removes a key from the file cache, clearing all metadata about that key within the cache.
 Also removes the backing file on disk if it still exists.  Returns `true` if the key was
 actually deleted.
 """
-function delete!(scfc::SizeConstrainedFileCache, key::AbstractString)
+function Base.delete!(scfc::FileCache, key::AbstractString)
     if !haskey(scfc.entries, key)
         return false
     end
@@ -149,12 +150,12 @@ function delete!(scfc::SizeConstrainedFileCache, key::AbstractString)
 end
 
 """
-    hit!(scfc, key)
+    hit!(fc::FileCache, key)
 
 Returns `true` if the key exists within the cache, `false` otherwise.  Increments access
 counters for the given key, recording last access time, number of times accessed, etc...
 """
-function hit!(scfc::SizeConstrainedFileCache, key::AbstractString)
+function hit!(scfc::FileCache, key::AbstractString)
     # If this is not in our entries, return `false`
     if !haskey(scfc.entries, key)
         return false
@@ -170,18 +171,18 @@ function hit!(scfc::SizeConstrainedFileCache, key::AbstractString)
 end
 
 """
-    rebuild!(scfc)
+    rebuild!(fc::FileCache)
 
 Rebuilds the file cache datastructures within memory from disk.  This is not a lossless
 operation; last access times may be inaccurate and number of times accessed will be set
 to 1 for any key that was not previously tracked.  This is done automatically when
-creating a new cache; the SCFC will scan its root directory and populate itself with the
+creating a new cache; the file cache will scan its root directory and populate itself with the
 values gathered using this function.
 """
-function rebuild!(scfc::SizeConstrainedFileCache)
+function rebuild!(scfc::FileCache)
     # Clear the total size to zero, then build it back up again
     scfc.total_size = UInt64(0)
-    
+
     # We will create a new entries dict:
     new_entries = Dict{String,CacheEntry}()
     old_entries = scfc.entries

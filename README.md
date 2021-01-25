@@ -1,6 +1,6 @@
 # FilesystemDatastructures.jl
 
-This package collects useful filesystem datastructures.  Currently, it implements only one, the `SizeConstrainedFileCache`.
+This package collects useful filesystem datastructures.  Currently, it implements two file caches: `SizeConstrainedFileCache` and `NFileCache`.
 
 ## `SizeConstrainedFileCache`
 
@@ -31,4 +31,18 @@ delete!(scfc, key)
 
 # Show that hit!() now returns false:
 @show hit!(scfc, key)
+```
+
+## `NFileCache`
+
+The `NFileCache` is similar to `SizeConstrainedFileCache` but targets number of files in the cache rather than number of bytes. `NFileCache` supports the same built-in eviction strategies `LRU` and `LFU`. The interface is the same (`add!`, `hit!`, `delete!`, see above).
+
+Example:
+
+```julia
+using FilesystemDatastructures
+
+# Create a cache that retains maximum 10 files
+root = mktempdir()
+fc = NFileCache(root, 10, DiscardLRU())
 ```

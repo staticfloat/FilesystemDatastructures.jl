@@ -3,6 +3,7 @@ module FilesystemDatastructures
 # Include the code for this package
 include("DiskUtils.jl")
 include("SizeConstrainedFileCache.jl")
+include("NFileCache.jl")
 
 
 # precompilation
