@@ -15,6 +15,22 @@ abstract type FileCache end
 Represents a size-constrained file cache.  Configurable with different policies for when
 to discard elements from the cache and how to choose which elements to discard.
 
+    SizeConstrainedFileCache(root, target_func, discard_func; predicate=x->true)
+
+Construct a new file cache. Arguments:
+ - `root`: the root directory of the cache.
+ - `target_func`: function that return the (maximum) number of bytes that files
+   in the cache may occupy, see e.g. `TargetSizeKeepFree` and `TargetSizeConstant`.
+ - `discard_func`: function that return the eviction order, see e.g. `DiscardLRU`
+   and `DiscardLFU`.
+ - `predicate`: function that determines whether a file should be tracked/included
+   in the cache. Currently only used for existing files when setting up the file cache.
+   The default is to track every existing file.
+
+!!! warn
+    This is a potentially destructive operation since the file cache may delete
+    files in the `root` directory to fit the given constraints.
+
 Example usage:
 
     # Create cache that keeps 10GB free and releases LRU objects
@@ -57,7 +73,8 @@ mutable struct SizeConstrainedFileCache <: FileCache
     # discarded, etc...
     discard_ordering::Function
 
-    function SizeConstrainedFileCache(root::AbstractString, target_size::Function, discard_ordering::Function)
+    function SizeConstrainedFileCache(root::AbstractString, target_size::Function, discard_ordering::Function;
+                                      predicate::Function=x->true)
         scfc = new(
             string(root),
             Dict{String,CacheEntry}(),
@@ -67,7 +84,7 @@ mutable struct SizeConstrainedFileCache <: FileCache
         )
 
         # Always rebuild the scfc so that it represents the correct data on-disk
-        rebuild!(scfc)
+        rebuild!(scfc; predicate=predicate)
 
         # After rebuilding, immediately run a shrink check:
         target_size = scfc.target_size(scfc)
@@ -171,15 +188,19 @@ function hit!(scfc::FileCache, key::AbstractString)
 end
 
 """
-    rebuild!(fc::FileCache)
+    rebuild!(fc::FileCache; predicate::Function = x -> true)
 
 Rebuilds the file cache datastructures within memory from disk.  This is not a lossless
 operation; last access times may be inaccurate and number of times accessed will be set
 to 1 for any key that was not previously tracked.  This is done automatically when
 creating a new cache; the file cache will scan its root directory and populate itself with the
 values gathered using this function.
+
+The `predicate` keyword can be used to pass a predicate function (input: `key`, output: `Bool`)
+to filter which files in the root directory that should be tracked/included in the cache.
+The default is to include every file.
 """
-function rebuild!(scfc::FileCache)
+function rebuild!(scfc::FileCache; predicate::Function = x -> true)
     # Clear the total size to zero, then build it back up again
     scfc.total_size = UInt64(0)
 
@@ -191,8 +212,15 @@ function rebuild!(scfc::FileCache)
     mkpath(scfc.root)
     for (parent, dirs, files) in walkdir(scfc.root)
         for fname in files
-            # First, collect ground-truth size
             path = joinpath(parent, fname)
+            key = relpath(path, scfc.root)
+
+            # Check if this file should be included
+            if !(predicate(key)::Bool)
+                continue
+            end
+
+            # First, collect ground-truth size
             st = stat(path)
             size = filesize(st)
 
