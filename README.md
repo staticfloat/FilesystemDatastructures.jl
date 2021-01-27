@@ -11,7 +11,12 @@ Example usage:
 ```julia
 using FilesystemDatastructures
 
+# Note!! This is a potentially destructive operation: the file cache root will be
+# managed by the cache and files therein will be deleted when the constraints are
+# violated. Be careful with what you use as the root!
+
 root = mktempdir()
+# File cache that keep 10GB free
 scfc = SizeConstrainedFileCache(root, TargetSizeKeepFree(10*1024^3), DiscardLRU())
 
 # Add a new file:
@@ -42,7 +47,11 @@ Example:
 ```julia
 using FilesystemDatastructures
 
-# Create a cache that retains maximum 10 files
+# Note!! This is a potentially destructive operation: the file cache root will be
+# managed by the cache and files therein will be deleted when the constraints are
+# violated. Be careful with what you use as the root!
+
 root = mktempdir()
+# Create a cache that retains maximum 10 files
 fc = NFileCache(root, 10, DiscardLRU())
 ```
