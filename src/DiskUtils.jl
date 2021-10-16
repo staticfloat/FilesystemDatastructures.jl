@@ -25,7 +25,7 @@ else
     end
 
     function statfs(path::AbstractString)
-        req = Ref{NTuple{Int(Base._sizeof_uv_fs), UInt8}}()
+        req = zeros(UInt8, Base._sizeof_uv_fs)
         err = ccall(:uv_fs_statfs, Cint, (Ptr{Cvoid}, Ptr{Cvoid}, Cstring, Ptr{Cvoid}),
                     C_NULL, req, path, C_NULL)
         err < 0 && Base.uv_error("statfs($(repr(path)))", err)
